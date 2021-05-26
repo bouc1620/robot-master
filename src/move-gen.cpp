@@ -17,12 +17,22 @@ MoveGen::MoveGen(const Board& board) :
 	checkCount{ 0 } {
 }
 
+void MoveGen::clear() {
+	fullmoveNumber = board.getFullmoveNumber();
+	legalMoves.reset();
+	absolutePins.clear();
+	checkMask = FULL;
+	checkCount = 0;
+}
+
 bool MoveGen::isCheckmate() {
 	return getLegalMoves().empty() && checkCount > 0;
 }
 
 const MoveList& MoveGen::getLegalMoves() {
-	if (board.getFullmoveNumber() == fullmoveNumber && legalMoves) {
+	if (board.getFullmoveNumber() != fullmoveNumber) {
+		clear();
+	} else if (legalMoves) {
 		return legalMoves.value();
 	}
 
@@ -184,6 +194,7 @@ MoveList MoveGen::getKingMoves() {
 
 				if (attacksMask[side] == CASTLE_ATTACKS_MASK[board.getToMove()][side] &&
 					blockersMask[side] == CASTLE_BLOCKERS_MASK[board.getToMove()][side]) {
+
 					allMoves.push_back(CASTLE_MOVES[board.getToMove()][side]);
 				}
 			}

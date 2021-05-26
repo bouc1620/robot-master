@@ -23,6 +23,7 @@ public:
 	const MoveList& getLegalMoves();
 
 private:
+	void clear();
 	MoveList getKingMoves();
 	MoveList getPawnMoves() const;
 	MoveList getKnightMoves() const;
