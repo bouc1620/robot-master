@@ -1,0 +1,17 @@
+move-gen:
+  - use move semantics to concatenate MoveList together
+
+FEN:
+  - rework the whole thing, maybe reuse methods from move-gen
+  - FEN generation from Board object
+
+Board:
+  - rework doMove's logic, too complicated, it was a first draft to test the move generation
+  - make an undoMove method (needs a rework of the Move class)
+
+Move:
+  - transition from 16 to 32 bits moves, add informations to moves to be used by the evaluation
+    function and by the Board object to undoMove
+
+attack:
+  - maybe change the constexpr to an init function to be run at start as the app takes ~3Mib
