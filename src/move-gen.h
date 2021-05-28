@@ -24,12 +24,12 @@ public:
 
 private:
 	void clear();
-	MoveList getKingMoves();
-	MoveList getPawnMoves() const;
-	MoveList getKnightMoves() const;
-	MoveList getSliderMoves(Piece) const;
+	void findKingMoves();
+	void findPawnMoves();
+	void findKnightMoves();
+	void findSliderMoves(Piece);
 	void findAbsolutePins();
-	U64 findRay(int, int) const;
+	U64 getRay(int, int) const;
 };
 
 #endif

@@ -43,6 +43,8 @@ void perftDivide(int depth, std::string FEN) {
 	Board board(FEN);
 	MoveGen moveGen(board);
 
+	std::cout << "\n";
+
 	auto startTime = std::chrono::steady_clock::now();
 
 	for (Move move : moveGen.getLegalMoves()) {

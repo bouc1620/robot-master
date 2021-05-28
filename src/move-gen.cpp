@@ -36,41 +36,28 @@ const MoveList& MoveGen::getLegalMoves() {
 		return legalMoves.value();
 	}
 
-	legalMoves = getKingMoves();
+	legalMoves = MoveList{};
 
-	if (checkCount > 1) {
+	findKingMoves();
+
+	if (checkCount >= 2) {
 		return legalMoves.value();
 	}
 
 	findAbsolutePins();
 
-	MoveList pawnMoves = getPawnMoves();
-	legalMoves.value().insert(
-		legalMoves.value().end(),
-		make_move_iterator(pawnMoves.begin()),
-		make_move_iterator(pawnMoves.end())
-	);
+	findPawnMoves();
 
-	MoveList knightMoves = getKnightMoves();
-	legalMoves.value().insert(
-		legalMoves.value().end(),
-		make_move_iterator(knightMoves.begin()),
-		make_move_iterator(knightMoves.end())
-	);
+	findKnightMoves();
 
 	for (Piece slider : { BISHOP, ROOK, QUEEN }) {
-		MoveList sliderMoves = getSliderMoves(slider);
-		legalMoves.value().insert(
-			legalMoves.value().end(),
-			make_move_iterator(sliderMoves.begin()),
-			make_move_iterator(sliderMoves.end())
-		);
+		findSliderMoves(slider);
 	}
 
 	return legalMoves.value();
 }
 
-MoveList MoveGen::getKingMoves() {
+void MoveGen::findKingMoves() {
 	const std::function<U64(U64, U64, Color)> opponentAttacks[] =
 	{
 		[this](U64 king, U64 blockers, Color opponent) -> U64 {
@@ -88,7 +75,7 @@ MoveList MoveGen::getKingMoves() {
 
 					if (king & attacks) {
 						checkCount++;
-						checkMask = findRay(bitscanForward(king), sliderSquare);
+						checkMask = getRay(bitscanForward(king), sliderSquare);
 					}
 				}
 			}
@@ -142,8 +129,6 @@ MoveList MoveGen::getKingMoves() {
 		}
 	};
 
-	MoveList allMoves{};
-
 	Color opponent = opposite(board.getToMove());
 
 	U64 king = board.getPieces()[board.getToMove()][KING];
@@ -152,7 +137,6 @@ MoveList MoveGen::getKingMoves() {
 	U64 blockers = (board.getAllPieces()[WHITE] | board.getAllPieces()[BLACK]) & ~king;
 
 	U64 attacks = attack::king(kingSquare);
-
 	attacks &= ~(board.getAllPieces()[board.getToMove()]);
 
 	U64 controlled = ZERO;
@@ -160,7 +144,7 @@ MoveList MoveGen::getKingMoves() {
 		controlled |= check(king, blockers, opponent);
 
 		if (checkCount > 1 && !(attacks & ~controlled)) {
-			return allMoves;
+			return;
 		}
 	}
 	
@@ -168,7 +152,7 @@ MoveList MoveGen::getKingMoves() {
 
 	while (attacks) {
 		int endSquare = popLSB(attacks);
-		allMoves.push_back(Move(kingSquare, endSquare));
+		legalMoves.value().push_back(Move(kingSquare, endSquare));
 	}
 
 	static const std::array<std::array<U64, 2>, 2> CASTLE_ATTACKS_MASK =
@@ -195,18 +179,14 @@ MoveList MoveGen::getKingMoves() {
 				if (attacksMask[side] == CASTLE_ATTACKS_MASK[board.getToMove()][side] &&
 					blockersMask[side] == CASTLE_BLOCKERS_MASK[board.getToMove()][side]) {
 
-					allMoves.push_back(CASTLE_MOVES[board.getToMove()][side]);
+					legalMoves.value().push_back(CASTLE_MOVES[board.getToMove()][side]);
 				}
 			}
 		}
 	}
-
-	return allMoves;
 }
 
-MoveList MoveGen::getPawnMoves() const {
-	MoveList allMoves{};
-
+void MoveGen::findPawnMoves() {
 	Color opponent = opposite(board.getToMove());
 
 	U64 pawns = board.getPieces()[board.getToMove()][PAWN];
@@ -252,34 +232,30 @@ MoveList MoveGen::getPawnMoves() const {
 
 		while (attacks) {
 			int endSquare = popLSB(attacks);
-			allMoves.push_back(Move(pawnSquare, endSquare));
+			legalMoves.value().push_back(Move(pawnSquare, endSquare));
 		}
 
 		while (pushes) {
 			int endSquare = popLSB(pushes);
-			allMoves.push_back(Move(pawnSquare, endSquare));
+			legalMoves.value().push_back(Move(pawnSquare, endSquare));
 		}
 
 		if (enPassant) {
 			int endSquare = bitscanForward(enPassant);
-			allMoves.push_back(Move(pawnSquare, endSquare, EN_PASSANT));
+			legalMoves.value().push_back(Move(pawnSquare, endSquare, EN_PASSANT));
 		}
 
 		while (promotions) {
 			int endSquare = popLSB(promotions);
 
 			for (Piece promotion : { KNIGHT, BISHOP, ROOK, QUEEN }) {
-				allMoves.push_back(Move(pawnSquare, endSquare, PROMOTION, promotion));
+				legalMoves.value().push_back(Move(pawnSquare, endSquare, PROMOTION, promotion));
 			}
 		}
 	}
-
-	return allMoves;
 }
 
-MoveList MoveGen::getKnightMoves() const {
-	MoveList allMoves{};
-
+void MoveGen::findKnightMoves() {
 	Color opponent = opposite(board.getToMove());
 
 	U64 knights = board.getPieces()[board.getToMove()][KNIGHT];
@@ -297,16 +273,12 @@ MoveList MoveGen::getKnightMoves() const {
 
 		while (attacks) {
 			int endSquare = popLSB(attacks);
-			allMoves.push_back(Move(knightSquare, endSquare));
+			legalMoves.value().push_back(Move(knightSquare, endSquare));
 		}
 	}
-
-	return allMoves;
 }
 
-MoveList MoveGen::getSliderMoves(Piece piece) const {
-	MoveList allMoves{};
-
+void MoveGen::findSliderMoves(Piece piece) {
 	Color opponent = opposite(board.getToMove());
 
 	U64 sliders = board.getPieces()[board.getToMove()][piece];
@@ -327,11 +299,9 @@ MoveList MoveGen::getSliderMoves(Piece piece) const {
 
 		while (attacks) {
 			int endSquare = popLSB(attacks);
-			allMoves.push_back(Move(sliderSquare, endSquare));
+			legalMoves.value().push_back(Move(sliderSquare, endSquare));
 		}
 	}
-
-	return allMoves;
 }
 
 void MoveGen::findAbsolutePins() {
@@ -411,7 +381,7 @@ void MoveGen::findAbsolutePins() {
 	}
 }
 
-U64 MoveGen::findRay(int startSquare, int endSquare) const {
+U64 MoveGen::getRay(int startSquare, int endSquare) const {
 	U64 end = ONE << endSquare;
 
 	U64 startT = attack::rook(startSquare, end);

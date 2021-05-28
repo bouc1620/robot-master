@@ -15,6 +15,14 @@ constexpr int getRank(int square) {
 	return square / 8;
 }
 
+inline int getDiag(int square) {
+	return 7 - (getRank(square) - getFile(square));
+}
+
+inline int getAntidiag(int square) {
+	return getRank(square) + getFile(square);
+}
+
 constexpr int getSquare(int file, int rank) {
 	return file + rank * 8;
 }
