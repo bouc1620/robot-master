@@ -8,7 +8,7 @@ else
 	CXXFLAGS += -Ofast
 endif
 
-TARGET_NAME = galvaude
+TARGET_NAME = robot-master
 
 SRC_DIR = ./src
 OBJ_DIR = ./obj
