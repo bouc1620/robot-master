@@ -1,0 +1,84 @@
+Notes sur le fonctionnement de shallow-blue
+
+1. INITIALISATION:
+
+	Rays::init():
+		Il initialise en mémoire les masques de rangées/colonnes/diagonales/anti-diagonales.
+
+	PSquareTable::init():
+		Initialise la piece square table. Un array 2 x 2 x 6 x 64 := PHASES x COULEUR x PIECE x CASE qui contient un facteur
+		pour l'évaluation d'une position selon la phase de la partie (souvent simplement ouverture et finale).
+
+	ZKey::init():
+		Initialisation des propriétés pour la clé de Zobra.
+
+	MovePicker::init():
+		Le MovePicker sert à ordonner une liste de coups pour évaluer les plus importants.
+
+		L'initialisation crée la table MVV LVA, most valuable victim least valuable aggressor. Dans cette table,
+		toutes les paires de pièces victime-aggresseur existent excepté la paire roi-autre, le roi ne pouvant
+		être capturé.
+
+		On donne un score d'importance à ces paires, un entier.
+
+		{ pion, cavalier, fou, tour, dame } x { roi, dame, tour, fou, cavalier, pion } (produit cartésien)
+		La paire pion-roi a un score de 0 tandis que la paire finale dame-pion a un score de 4 * 6 - 1.
+
+	Attacks::init():
+		Initialisation des magic bitboard et lookup tables pour les attaques.
+
+	Eval::init():
+		Initialisation de masques permettant de calculer d'aider à calculer les score d'évaluation des positions.
+		Par exemple, un masque pour les 64 cases qui détermine si un pion est passé.
+
+		*** Relire ce que l'initialisation fait plus en détail, 3 tâches ***
+
+	Uci::init():
+		Initialise le livre d'ouverture.
+
+	Uci::start() --> Uci::loop():
+		Uci a un objet Board local, fait appel à board.setToStartPos() au tout début.
+
+			Board::setToStartPos():
+				Clear et crée les bitboards. Conserve aussi le joueur au trait par un enum et les droits de roque dans un unsigned char,
+				unsigned char _castlingRights : 4 bits, 1 par droit de roque. _enPassant est conservé dans un U64. Met à jour les
+				bitboards pour multiples pièces, crée la ZKey courante pour le board en envoyant l'adresse du board au constructeur
+				de ZKey plus il conserve aussi une _pawnStructureZkey encore créée avec l'adresse du board. Termine avec la création
+				de la PieceSquareTable toujours avec l'adresse du board _pst.
+
+					ZKey::ZKey(&board): Rien de spécial ici.
+					ZKey::setFromPawnStructure(&board): Méthode, reset à Zéro puis crée la ZKey avec les pions seuls.
+
+					*** Pour mieux organiser mon code, je devrais faire comme lui et déplacer la logique de la zkey dans des méthodes
+					de la classe zkey, pas faire de ^= dans Board.
+
+					*** Peut-être comprendre pourquoi il conserve 4 booléens des droits de roques.
+
+					PSquareTable(&board):
+						Itère sur toutes les pièces et crée les scores de la piece square table pour toutes les phases de la partie, peu
+						importe la phase courante.
+		
+		Différents tokens:
+			- 'uci': print les infos de l'engine.
+			- 'ucinewgame': reset le board, reset la positionHistory.
+
+					positionHistory::clear(): La positionHistory est un vecteur de ZKey.
+
+			- 'isready': retourne 'readyok'.
+			- 'stop': arrête la recherche. Appel à search.stop().
+
+					search.stop() -> Search::stop(), utilisé sous forme de shared_ptr<Search>:
+					
+
+
+---
+
+Notes générales:
+
+	- Possible de changer getRank pour square >> 3 et getFile pour square & 7.
+	- Mettre les bitobards à blank lors de l'initialisation de la position.
+
+	- Commencer avec une évaluation simple pour mettre en place les composantes de l'application, bâtir là-dessus.
+
+	- Halfmove clock: Selon la règle des 50 coups, si on arrive à un Halfmove clock de 100 coups ET que le joueur au trait
+		a un coup légal à jouer, la partie est nulle. Si le 100è coup est un mat, c'est un gain pour le joueur qui mat.
