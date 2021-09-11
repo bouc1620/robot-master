@@ -68,9 +68,40 @@ Notes sur le fonctionnement de shallow-blue
 			- 'stop': arrête la recherche. Appel à search.stop().
 
 					search.stop() -> Search::stop(), utilisé sous forme de shared_ptr<Search>:
+
+			- 'go': appel à go(&istringstream).
+
+					crée un objet Limit du namespace Search et associe des paramètres à cet objet selon les autres tokens (arguments)
+					reçus. *** tous les tokens suivant 'go', 'go' inclu, devraient être inclus dans la même string.
+
+					Il n'implémente pas 'mate', 'searchmoves' et 'ponder'.
+						- 'mate': search for a mate in x moves
+						- 'searchmoves': restrict the search to this or these move(s) only
+						- 'ponder': allow the engine to think on the opponent's time?
 					
+					arguments implémentés:
+						- 'depth' x : search up to x plies only
+						- 'infinite' : allow infinite ply search, search until the 'stop' command is received
+						- 'movetime' x : search for exactly x seconds
+						- 'nodes' x: search x nodes only
+						- 'wtime' 'btime' x: White or Black have x seconds left on their clock
+						- 'winc' 'binc' x: set White or Black's increment
+						- 'movestogo' x: there are x moves left to the next time control
 
+			Il crée ensuite un nouveau pointeur de Search avec l'objet limits créé, le board courant et la positionHistory courante.
 
+			Il crée aussi un fil d'exécution pour la recherche pour la fonction Uci::pickBestMove
+
+		Uci::pickBestMove: soit recherche dans le livre d'ouverture, soit appel à Search::iterDeep.
+
+	Search:
+		
+		Fait la recherche avec élagage alpha-beta.
+
+		Constructeur Search::Search(&Board, Limits, vector<ZKey> positionHistory, bool logUci): 
+			Seul constructeur de Search, appelé une seule fois dans l'application, à la réception d'une commande 'go'.
+			Le constructeur commence par calculer le temps à allouer au coup d'après les infos du temps restant et des coups restants avant le contrôle de temps.
+					
 ---
 
 Notes générales:
