@@ -1,3 +1,5 @@
 # robot-master
 
-another chess engine. WIP.
+another chess engine.
+
+This project is incomplete and pretty much abandoned...
